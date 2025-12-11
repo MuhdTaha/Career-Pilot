@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.pyc
+node_modules/
+dist/
+.next/
+out/
+.DS_Store
+.vscode/
+.idea/
+*.log
+coverage/
+backend/venv/
