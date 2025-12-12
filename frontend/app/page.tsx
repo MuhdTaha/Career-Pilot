@@ -5,6 +5,7 @@ import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import KanbanBoard from "@/components/KanbanBoard";
+import AddJobDialog from "@/components/AddJobDialog";
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
@@ -28,8 +29,10 @@ export default function Home() {
         <h1 className="text-3xl font-bold text-slate-900">CareerPilot ✈️</h1>
         {user ? (
             <div className="flex items-center gap-4">
-                <span className="text-sm font-medium">{user.displayName}</span>
-                <Button variant="outline" onClick={() => auth.signOut()}>Logout</Button>
+              <span className="text-sm font-medium">{user.displayName}</span>
+              <Button variant="outline" onClick={() => auth.signOut()}>Logout</Button>
+              {/* Pass a dummy function for now, or trigger a refresh in Kanban */}
+              <AddJobDialog userId={user.uid} onJobAdded={() => window.location.reload()} />
             </div>
         ) : (
             <Button onClick={handleLogin}>Sign in with Google</Button>
@@ -37,7 +40,10 @@ export default function Home() {
       </header>
 
       {user ? (
-        <KanbanBoard userId={user.uid} />
+        <div className="flex items-center gap-4">
+          <KanbanBoard userId={user.uid} />
+          <div className="h-8 w-[px] bg-slate-300 mx-2"></div>
+        </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-[60vh] text-center">
             <h2 className="text-xl font-semibold mb-4">Welcome to your Agentic Job Hunt</h2>

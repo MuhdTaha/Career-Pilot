@@ -30,3 +30,7 @@ async def update_job(user_id: str, job_id: str, updates: dict):
     job_ref = db.collection('users').document(user_id).collection('jobs').document(job_id)
     job_ref.update(updates)
     return {"id": job_id, "updated": True}
+
+async def delete_job(user_id: str, job_id: str):
+    db.collection('users').document(user_id).collection('jobs').document(job_id).delete()
+    return True
