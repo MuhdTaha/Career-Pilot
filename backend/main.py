@@ -3,11 +3,13 @@
 from typing import Any, Dict
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from models import JobApplication
-from database import get_jobs_for_user, add_job_application, update_job, delete_job
+
 import os
 import traceback
 from dotenv import load_dotenv
+
+from models import JobApplication, JobIntelligence
+from database import get_jobs_for_user, add_job_application, update_job, delete_job, db
 from tools import scrape_job_text
 from agents import analyze_job_text
 
@@ -102,23 +104,24 @@ async def analyze_job(user_id: str, job_id: str):
     
     # 3. Run the Recruiter Agent to analyze the job description
     print(f"Agent Analyzing Job: {job_id}...")
-    analysis_result = analyze_job_text(description)
+    analysis_dict = analyze_job_text(description)
     
     # 4. Save the analysis back to Firestore
+    try:
+        job_intel = JobIntelligence(**analysis_dict)
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Analysis result validation failed: {str(e)}")
+    
     updates = {
-        "job_intel": analysis_result,
-        "status": "analyzing",
-        "technical_requirements": analysis_result.get("hard_skills", []),
-        "cultural_values": analysis_result.get("cultural_values", [])
+        "job_intel": job_intel.model_dump(mode="json"),
+        "position_title": job_intel.role_name,
     }
     
-    # If the AI found a clear Role Name, update the card title
-    if analysis_result.get("role_name"):
-        updates["position_title"] = analysis_result["role_name"]
-        
+    # 5. Update the job document in Firestore
     doc_ref.update(updates)
     
-    return {"status": "success", "data": analysis_result}
+    return {"status": "success", "data": job_intel.model_dump(mode="json")}
     
 # Delete job posting route placeholder
 @app.delete("/api/jobs/{user_id}/{job_id}")

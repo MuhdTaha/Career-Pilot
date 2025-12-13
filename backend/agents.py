@@ -14,26 +14,19 @@ def analyze_job_text(job_text: str):
     Uses Gemini to extract structured intelligence from a job description.
     """
     prompt = f"""
-    You are an expert Technical Recruiter and Career Coach. 
-    Analyze the job description provided below. Your goal is to normalize varied job posting styles into a structured format.
-
-    ### INSTRUCTIONS:
-    1. **Identify Semantics over Syntax:** Job descriptions use different headers. 
-       - Treat sections like "You are a good fit if...", "What you bring", "About you", "Qualifications", or "Requirements" as **Required Experience**.
-       - Treat sections like "Bonus points", "Nice to have", "Preferred Qualifications", "Pluses", or "It would be great if..." as **Desirable Experience**.
-    2. **Inference:** If distinct headers are missing, infer the requirements based on language intensity (e.g., "Must have" vs. "Experience with X is a plus").
-    3. **Extraction:** Populate the JSON fields below.
-
+    You are an expert Technical Recruiter. Analyze the job description below.
+    
     ### TARGET JSON STRUCTURE:
+    Ensure the output matches this structure exactly:
     {{
         "role_name": "The specific job title mentioned",
-        "job_description_summary": "A concise summary of the overall job description in 2-3 sentences.",
-        "required_experience": "A comprehensive summary of the mandatory experience/background. Include years of experience if stated.",
-        "desirable_experience": "A summary of preferred or bonus experience. If none is found, return null.",
-        "hard_skills": ["List", "of", "specific", "tools", "languages", "or", "platforms"],
-        "soft_skills": ["List", "of", "interpersonal", "or", "behavioral", "traits"],
-        "cultural_values": ["List", "of", "explicit", "or", "implied", "company", "values"],
-        "mission_critical": "A one-sentence synthesis of the core problem this role solves for the company."
+        "job_description_summary": "A concise summary of the role in 2 sentences.",
+        "required_experience": "Summary of mandatory technical/professional experience.",
+        "desirable_experience": "Summary of 'nice-to-have' skills (or null if none).",
+        "hard_skills": ["List", "of", "technical", "skills", "tools", "languages"],
+        "soft_skills": ["List", "of", "behavioral", "traits"],
+        "cultural_values": ["List", "of", "company", "values"],
+        "mission_critical": "One sentence on the core problem this role solves."
     }}
 
     JOB DESCRIPTION:

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { MoreHorizontal, Trash2, Pencil } from "lucide-react"; // Icons
+import { MoreHorizontal, Trash2, Pencil, CalendarClock } from "lucide-react"; // Icons
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import EditJobDialog from "./EditJobDialog";
+import {JobDetailsDialog, JobIntel} from "./JobDetailsDialog";
 
 // Define 4 columns for the Kanban board
 const COLUMNS = {
@@ -39,7 +40,9 @@ type Job = {
     position_title: string;
     job_url: string;
     status: string;
-    raw_description?: string;   
+    created_at: string;
+    raw_description?: string;
+    job_intel?: JobIntel;   
 };
 
 export default function KanbanBoard({ userId}: { userId: string }) {
@@ -47,6 +50,7 @@ export default function KanbanBoard({ userId}: { userId: string }) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   const fetchJobs = useCallback(async () => {
     if (!userId) return;
@@ -126,6 +130,16 @@ export default function KanbanBoard({ userId}: { userId: string }) {
     return jobs.filter((job) => job.status === status);
   };
 
+  // Helper for date formatting
+  const formatDate = (dateString: string) => {
+    if(!dateString) return "";
+    return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+  };
+
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
@@ -148,7 +162,8 @@ export default function KanbanBoard({ userId}: { userId: string }) {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className="group relative hover:shadow-md transition-shadow"
+                            onClick={() => setSelectedJob(job)}
+                            className="group relative hover:shadow-md hover:cursor-pointer transition-shadow"
                           >
                             <CardHeader className="p-4 pb-2 pr-8"> {/* Added pr-8 for menu space */}
                               <CardTitle className="text-base font-bold truncate">{job.company_name}</CardTitle>
@@ -173,8 +188,17 @@ export default function KanbanBoard({ userId}: { userId: string }) {
                               </div>
                               {/* ------------------ */}
                             </CardHeader>
-                            <CardContent className="p-4 pt-0 text-sm text-slate-500">
-                              <div className="truncate">{job.position_title}</div>
+                            <CardContent className="p-4 pt-0">
+                              {/* Position Title */}
+                              <div className="font-medium text-sm text-slate-600 truncate mb-2">
+                                {job.position_title}
+                              </div>
+                              
+                              {/* Footer: Date */}
+                              <div className="flex items-center text-xs text-slate-400 mt-2">
+                                <CalendarClock className="h-3 w-3 mr-1" />
+                                {formatDate(job.created_at)}
+                              </div>
                             </CardContent>
                           </Card>
                         )}
@@ -190,6 +214,12 @@ export default function KanbanBoard({ userId}: { userId: string }) {
       </DragDropContext>
 
       {/* --- DIALOGS --- */}
+      <JobDetailsDialog 
+        job={selectedJob} 
+        open={!!selectedJob} 
+        onOpenChange={(open) => !open && setSelectedJob(null)} 
+      />
+
       <EditJobDialog 
         job={editingJob} 
         open={!!editingJob} 
