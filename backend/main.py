@@ -62,6 +62,7 @@ async def create_job(job: JobApplication):
 @app.get("/api/jobs/{user_id}")
 async def get_jobs_for_user_route(user_id: str):
     try:
+        # Fetch jobs from database
         jobs = await get_jobs_for_user(user_id)
         return jobs
     except Exception as e:
@@ -72,14 +73,16 @@ async def get_jobs_for_user_route(user_id: str):
 @app.put("/api/jobs/{user_id}/{job_id}")
 async def update_job_status(user_id: str, job_id: str, payload: Dict[str, Any]):
     try:
-        # Only allow updating certain fields for now
-        allowed_updates = {}
-        if 'status' in payload:
-            allowed_updates['status'] = payload['status']
-            
-        if not allowed_updates:
-            raise HTTPException(status_code=400, detail="No valid fields to update.")
+        # Extract allowed fields to update
+        allowed_updates = {key: payload[key] for key in [
+            'status',
+            'raw_description', 
+            'position_title', 
+            'job_url', 
+            'company_name',
+            ] if key in payload}
         
+        # Update the job in the database
         result = await update_job(user_id, job_id, allowed_updates)
         return result
     except Exception as e:

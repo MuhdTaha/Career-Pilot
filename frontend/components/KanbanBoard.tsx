@@ -145,7 +145,7 @@ export default function KanbanBoard({ userId}: { userId: string }) {
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="flex h-[calc(100vh-200px)] gap-4 overflow-x-auto pb-4">
           {Object.entries(COLUMNS).map(([columnId, columnTitle]) => (
-            <div key={columnId} className="flex min-w-[280px] w-full max-w-xs flex-col rounded-lg bg-slate-100 border border-slate-200">
+            <div key={columnId} className="flex min-w-[300px] w-full max-w-xs flex-col rounded-lg bg-slate-100 border border-slate-200">
                {/* Column Header */}
               <div className="p-4 font-semibold text-slate-700 flex justify-between">
                   {columnTitle}
@@ -165,11 +165,14 @@ export default function KanbanBoard({ userId}: { userId: string }) {
                             onClick={() => setSelectedJob(job)}
                             className="group relative hover:shadow-md hover:cursor-pointer transition-shadow"
                           >
-                            <CardHeader className="p-4 pb-2 pr-8"> {/* Added pr-8 for menu space */}
+                            <CardHeader className="p-4 pb-2 pr-8">
                               <CardTitle className="text-base font-bold truncate">{job.company_name}</CardTitle>
                               
-                              {/* --- MENU TRIGGER --- */}
-                              <div className="absolute top-3 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div 
+                              className="absolute top-3 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => e.stopPropagation()}
+                              >
+                              {/* ------------------ */}
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -177,10 +180,12 @@ export default function KanbanBoard({ userId}: { userId: string }) {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => setEditingJob(job)}>
+                                    <DropdownMenuItem onClick={(e) => {
+                                      e.stopPropagation(); setEditingJob(job)}}>
                                       <Pencil className="mr-2 h-4 w-4" /> Edit
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="text-red-600" onClick={() => setDeletingJobId(job.id)}>
+                                    <DropdownMenuItem className="text-red-600" onClick={(e) => {
+                                      e.stopPropagation(); setDeletingJobId(job.id)}}>
                                       <Trash2 className="mr-2 h-4 w-4" /> Delete
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
@@ -190,12 +195,12 @@ export default function KanbanBoard({ userId}: { userId: string }) {
                             </CardHeader>
                             <CardContent className="p-4 pt-0">
                               {/* Position Title */}
-                              <div className="font-medium text-sm text-slate-600 truncate mb-2">
+                              <div className="font-medium text-sm text-slate-600 mb-2">
                                 {job.position_title}
                               </div>
                               
                               {/* Footer: Date */}
-                              <div className="flex items-center text-xs text-slate-400 mt-2">
+                              <div className="flex items-center text-xs text-slate-400 mt-10">
                                 <CalendarClock className="h-3 w-3 mr-1" />
                                 {formatDate(job.created_at)}
                               </div>

@@ -30,7 +30,7 @@ interface EditJobDialogProps {
 }
 
 export default function EditJobDialog({ job, open, onOpenChange, userId, onJobUpdated }: EditJobDialogProps) {
-  const [loading, setLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     company_name: "",
     position_title: "",
@@ -52,25 +52,39 @@ export default function EditJobDialog({ job, open, onOpenChange, userId, onJobUp
 
   const handleSave = async () => {
     if (!job) return;
-    setLoading(true);
+    setLoadingStatus("Saving changes...");
+
     try {
+      // 1. Save the basic updated job details to the backend
       await fetch(`http://localhost:8000/api/jobs/${userId}/${job.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
+
+      // 2. Check if raw description was updated and is sufficiently long to re-trigger AI analysis
+      if (formData.raw_description && formData.raw_description.length > 50 && formData.raw_description !== job.raw_description) {
+        setLoadingStatus("Re-analyzing with AI...");
+
+        await fetch(`http://localhost:8000/api/analyze/${userId}/${job.id}`, {
+          method: "POST",
+        });
+      }
+
+      // 3. Cleanup and notify parent
       onJobUpdated();
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to update", error);
+      alert("Failed to save changes. Check console.");
     } finally {
-      setLoading(false);
+      setLoadingStatus(null);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="md:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Edit Job Details</DialogTitle>
         </DialogHeader>
@@ -109,8 +123,8 @@ export default function EditJobDialog({ job, open, onOpenChange, userId, onJobUp
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={loading}>{loading ? "Saving..." : "Save Changes"}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loadingStatus !== null}>Cancel</Button>
+          <Button onClick={handleSave} disabled={loadingStatus !== null}>{loadingStatus ? loadingStatus : "Save Changes"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -48,7 +48,7 @@ export function JobDetailsDialog({ job, open, onOpenChange }: JobDetailsDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-[800px] h-[85vh] flex flex-col p-0 gap-0 overflow-auto">
         {/* Header Section */}
         <div className="p-6 pb-4 border-b">
           <DialogHeader>
@@ -61,7 +61,7 @@ export function JobDetailsDialog({ job, open, onOpenChange }: JobDetailsDialogPr
               </div>
               {job.job_url && (
                 <Button variant="outline" size="sm" asChild>
-                  <a href={job.job_url} target="_blank" rel="noopener noreferrer" className="gap-2">
+                  <a href={job.job_url} target="_blank" rel="noopener noreferrer" className="gap-2 mt-5">
                     <ExternalLink className="h-4 w-4" />
                     View Posting
                   </a>
