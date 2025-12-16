@@ -1,17 +1,19 @@
 # backend/main.py
 
 from typing import Any, Dict
-from fastapi import FastAPI, HTTPException
+
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 import os
 import traceback
 from dotenv import load_dotenv
+from io import BytesIO
+from pypdf import PdfReader
 
-from models import JobApplication, JobIntelligence
-from database import get_jobs_for_user, add_job_application, update_job, delete_job, db
-from tools import scrape_job_text
-from agents import analyze_job_text
+from models import JobApplication, JobIntelligence, MasterResume, TailoringStrategy
+from database import get_jobs_for_user, add_job_application, update_job, delete_job, db, get_user_profile, save_user_profile
+from agents import analyze_job_text, generate_tailoring_strategy, parse_resume_text
 
 # Load environment variables from .env file
 load_dotenv()
@@ -135,6 +137,95 @@ async def delete_job_posting(user_id: str, job_id: str):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    
+# --- Profile Routes ---
+@app.get("/api/profile/{user_id}")
+async def get_profile(user_id: str):
+    profile = await get_user_profile(user_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return profile
+
+@app.post("/api/profile/{user_id}")
+async def update_profile(user_id: str, profile_data: MasterResume):
+    try:
+        saved_profile = await save_user_profile(user_id, profile_data.model_dump(mode="json"))
+        db.collection('users').document(user_id).collection('profile').document('master').set(saved_profile, merge=True)
+        return saved_profile
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# --- Resume Parsing Route ---
+@app.post("/api/resume/parse")
+async def parse_resume(file: UploadFile = File(...)):
+    try:
+        # 1. Read the pdf file content
+        contents = await file.read()
+        pdf_reader = PdfReader(BytesIO(contents))
+        
+        # 2. Extract text from all pages
+        raw_text = ""
+        for page in pdf_reader.pages:
+            raw_text += page.extract_text() + "\n"
+            
+        # 3. Parse the resume text using Gemini Agent
+        print("Parsing Resume...")
+        parsed_data = parse_resume_text(raw_text)
+        
+        if not parsed_data:
+            raise HTTPException(status_code=500, detail="Resume parsing failed.")
+        
+        return parsed_data
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# --- Tailoring Strategy Route ---
+@app.post("/api/strategy/{user_id}/{job_id}")
+async def generate_strategy(user_id: str, job_id: str):
+    # 1. Fetch job posting from Firestore
+    doc_ref = db.collection('users').document(user_id).collection('jobs').document(job_id)
+    doc = doc_ref.get()
+    
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    job_data = doc.to_dict()
+    job_intel_data = job_data.get('job_intel', None)
+    
+    if not job_intel_data:
+        raise HTTPException(status_code=400, detail="Job intelligence not found. Please analyze the job first.")
+    
+    # 2. Fetch user profile
+    profile_data = await get_user_profile(user_id)
+    if not profile_data:
+        raise HTTPException(status_code=400, detail="User profile not found. Please create your profile first.")
+    
+    # 3. Generate tailoring strategy
+    try:
+        job_intel = JobIntelligence(**job_intel_data)
+        master_resume = MasterResume(**profile_data)
+        
+        print(f"Generating Strategy for {job_id}...")
+        strategy_dict = generate_tailoring_strategy(
+            job_intel.model_dump(mode="json"),
+            master_resume.model_dump(mode="json")
+        )
+        
+        strategy = TailoringStrategy(**strategy_dict)
+        
+        strategy_json = strategy.model_dump(mode="json")
+
+        # 4. Save the strategy back to Firestore
+        doc_ref.update({
+            "tailoring_strategy": strategy_json,
+        })
+        
+        return strategy_json
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Strategy generation failed: {str(e)}")
     
 if __name__ == "__main__":
     import uvicorn

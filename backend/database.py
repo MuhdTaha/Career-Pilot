@@ -34,3 +34,17 @@ async def update_job(user_id: str, job_id: str, updates: dict):
 async def delete_job(user_id: str, job_id: str):
     db.collection('users').document(user_id).collection('jobs').document(job_id).delete()
     return True
+
+async def get_user_profile(user_id: str):
+    doc_ref = db.collection('users').document(user_id).collection('profile').document('master')
+    doc = doc_ref.get()
+    if doc.exists:
+        return doc.to_dict()
+    return None
+
+async def save_user_profile(user_id: str, profile_data: dict):
+    doc_ref = db.collection('users').document(user_id).collection('profile').document('master')
+    # Ensure user_id is set
+    profile_data['user_id'] = user_id
+    doc_ref.set(profile_data, merge=True)
+    return profile_data
